@@ -1,5 +1,5 @@
 ---
-abstract: 'A implementation of the Data Mapper pattern (object-relational mapper).'
+abstract: 'An implementation of the Data Mapper pattern (object-relational mapper).'
 author:
   - 'Eisuke Oishi'
 build_requires:
@@ -53,4 +53,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/eisuke/dbix-objectmapper.git
-version: 0.3010
+version: 0.3011

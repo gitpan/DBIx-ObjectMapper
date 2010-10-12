@@ -2,7 +2,7 @@ package DBIx::ObjectMapper;
 use strict;
 use warnings;
 use 5.008_001;
-our $VERSION = '0.3010';
+our $VERSION = '0.3011';
 
 use Carp::Clan qw/^DBIx::ObjectMapper/;
 use Params::Validate qw(:all);
@@ -107,7 +107,7 @@ __END__
 
 =head1 NAME
 
-DBIx::ObjectMapper - A implementation of the Data Mapper pattern (object-relational mapper).
+DBIx::ObjectMapper - An implementation of the Data Mapper pattern (object-relational mapper).
 
 =head1 SYNOPSIS
 
