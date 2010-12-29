@@ -4,6 +4,9 @@ use warnings;
 use Carp::Clan qw/^DBIx::ObjectMapper/;
 use Scalar::Util qw(refaddr blessed);
 use Log::Any qw($log);
+use Try::Tiny;
+
+#my $in_global_destruction = 0;
 
 sub new {
     my ( $class, $cache, $search, $change_checker, $option ) = @_;
@@ -123,35 +126,58 @@ sub detach {
     $mapper->change_status('detached');
 }
 
+sub has_changed {
+    my $self = shift;
+    for my $obj (@{$self->{objects}}) {
+        next unless $obj;
+        my $mapper = $obj->__mapper__;
+        my $id = refaddr($obj);
+
+        if( $mapper->is_pending ) {
+            return 1;
+        }
+        elsif( $mapper->is_persistent ) {
+            return 1 if exists $self->{del_objects}->{$id};
+            return 1 if $mapper->is_modified;
+        }
+    }
+    return;
+}
+
 sub flush {
     my ( $self ) = @_;
 
     my @delete;
     my %delete_check;
+    my @errors;
     for my $obj (@{$self->{objects}}) {
         next unless $obj;
         my $mapper = $obj->__mapper__;
         my $id = refaddr($obj);
-        if( $mapper->is_pending ) {
-            $mapper->save();
-        }
-        elsif( $mapper->is_persistent ) {
-            if( exists $self->{del_objects}->{$id} ) {
-                delete $self->{del_objects}->{$id};
-                unless( $delete_check{$mapper->primary_cache_key} ) {
-                    push @delete, $mapper;
-                    $delete_check{$mapper->primary_cache_key} = 1;
+
+        try {
+            if( $mapper->is_pending ) {
+                $mapper->save();
+            }
+            elsif( $mapper->is_persistent ) {
+                if( exists $self->{del_objects}->{$id} ) {
+                    delete $self->{del_objects}->{$id};
+                    unless( $delete_check{$mapper->primary_cache_key} ) {
+                        $delete_check{$mapper->primary_cache_key} = 1;
+                        $mapper->delete();
+                    }
+                }
+                elsif( $mapper->is_modified ) {
+                    $mapper->update();
                 }
             }
-            elsif( $mapper->is_modified ) {
-                $mapper->update();
-            }
+        } catch {
+            push @errors, $_[0];
         }
     }
 
-    for my $del_mapper ( @delete ) {
-        $del_mapper->delete();
-    }
+    die join("\n", @errors) if @errors;
+    return 1;
 }
 
 sub _get_cache {
@@ -201,6 +227,10 @@ sub DESTROY {
     $self->demolish;
     warn "DESTROY $self" if $ENV{MAPPER_DEBUG};
 }
+
+#END{
+#    $in_global_destruction = 1;
+#}
 
 1;
 

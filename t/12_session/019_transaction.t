@@ -11,7 +11,7 @@ my $engine = DBIx::ObjectMapper::Engine::DBI->new({
     username => '',
     password => '',
     on_connect_do => [
-        q{CREATE TABLE books( id integer primary key, title text)},
+        q{CREATE TEMP TABLE books( id integer primary key, title text)},
     ],
 });
 
@@ -118,6 +118,145 @@ $mapper->maps(
 {
     my $session = $mapper->begin_session;
     is $session->search('MyTest18::Books')->count, 5;
+};
+
+{
+    $book->delete->execute;
+    my $session1 = $mapper->begin_session( autocommit => 0 );
+    $session1->add( MyTest18::Books->new( title => 'title' . $_ ) ) for 1 .. 5;
+    $session1->commit;
+
+    my $session2 = $mapper->begin_session( autocommit => 0 );
+    $session2->add( MyTest18::Books->new( title => 'title' . $_ ) ) for 6 .. 10;
+    $session2->commit;
+
+    $session1->add( MyTest18::Books->new( title => 'title' . $_ ) ) for 11 .. 15;
+    $session1->commit;
+};
+
+{
+    my $session = $mapper->begin_session;
+    is $session->search('MyTest18::Books')->count, 15;
+};
+
+{
+    $book->delete->execute;
+    my $session1 = $mapper->begin_session( autocommit => 0 );
+    $session1->add( MyTest18::Books->new( title => 'title' . $_ ) ) for 1 .. 5;
+
+    {
+        my $session2 = $mapper->begin_session( autocommit => 0 );
+        $session2->add(
+            MyTest18::Books->new( title => 'title' . $_ ) ) for 6 .. 10;
+        $session2->commit;
+    };
+
+    $session1->add( MyTest18::Books->new( title => 'title' . $_ ) ) for 11 .. 15;
+    $session1->rollback;
+};
+
+{
+    my $session = $mapper->begin_session;
+    is $session->search('MyTest18::Books')->count, 0;
+};
+
+{
+    $book->delete->execute;
+    my $session1 = $mapper->begin_session( autocommit => 0 );
+    $session1->add(
+        MyTest18::Books->new( id => $_, title => 'title' . $_ ) ) for 1 .. 5;
+    $session1->flush;
+
+    eval {
+        my $session2 = $mapper->begin_session( autocommit => 0 );
+        $session2->add(
+            MyTest18::Books->new( id => $_, title => 'title-x-' . $_ )
+            ) for 1 .. 5;
+        $session2->commit;
+    };
+    ok $@;
+    ok $@ =~ /PRIMARY KEY must be unique/, 'PRIMARY KEY must be unique';
+
+    $session1->add(
+        MyTest18::Books->new( id => $_, title => 'title' . $_ ) ) for 11 .. 15;
+    $session1->rollback;
+};
+
+{
+    my $session = $mapper->begin_session;
+    is $session->search('MyTest18::Books')->count, 0;
+};
+
+{
+    $book->delete->execute;
+    my $session1 = $mapper->begin_session( autocommit => 0 );
+    $session1->add(
+        MyTest18::Books->new( id => $_, title => 'title' . $_ ) ) for 1 .. 5;
+    $session1->flush;
+
+    my $session2 = $mapper->begin_session( autocommit => 0 );
+    eval {
+        $session2->add(
+            MyTest18::Books->new( id => $_, title => 'title' . $_ )
+            ) for 1 .. 5;
+        $session2->commit;
+    };
+    $session2 = undef;
+    ok $@;
+    ok $@ =~ /PRIMARY KEY must be unique/, 'PRIMARY KEY must be unique';
+
+    $session1->add(
+        MyTest18::Books->new( id => $_, title => 'title' . $_ ) ) for 11 .. 15;
+    $session1->commit;
+};
+
+{
+    my $session = $mapper->begin_session;
+    is $session->search('MyTest18::Books')->count, 10;
+};
+
+# XXX SQLite's bug? BegunWork is still true.
+$mapper->engine->disconnect;
+
+
+{
+    my $session = $mapper->begin_session( autocommit => 0 );
+    $session->add( MyTest18::Books->new( title => 'title', id => 1 ) );
+    $session->commit;
+    my $book = $session->get( 'MyTest18::Books' => 1 );
+    $session->rollback;
+    $book->title( 'title title' );
+    $session->commit;
+};
+
+
+{
+    my $session = $mapper->begin_session( autocommit => 0 );
+    my $book = $session->get( 'MyTest18::Books' => 1 );
+    is $book->title, 'title title';
+    $session->rollback;
+    $book->title('title');
+    # rollback
+};
+
+{
+    my $session = $mapper->begin_session( autocommit => 0 );
+    my $book = $session->get( 'MyTest18::Books' => 1 );
+    is $book->title, 'title title';
+};
+
+{
+    my $session = $mapper->begin_session( autocommit => 0 );
+    my $book = $session->get( 'MyTest18::Books' => 1 );
+    $session->delete($book);
+    $session->add( MyTest18::Books->new( title => 't', id => 1 ) );
+    $session->commit;
+};
+
+{
+    my $session = $mapper->begin_session( autocommit => 0 );
+    my $book = $session->get( 'MyTest18::Books' => 1 );
+    is $book->title, 't';
 };
 
 done_testing;

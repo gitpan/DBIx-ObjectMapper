@@ -2,7 +2,7 @@ package DBIx::ObjectMapper;
 use strict;
 use warnings;
 use 5.008_001;
-our $VERSION = '0.3012';
+our $VERSION = '0.3013';
 
 use Carp::Clan qw/^DBIx::ObjectMapper/;
 use Params::Validate qw(:all);
@@ -116,11 +116,11 @@ Create a engine and a mapper object.
  use DBIx::ObjectMapper;
  use DBIx::ObjectMapper::Engine::DBI;
 
- my $engine = DBIx::ObjectMapper::Engine::DBI->new(
-    dsn => 'DBD:SQLite:',
+ my $engine = DBIx::ObjectMapper::Engine::DBI->new({
+    dsn => 'dbi:SQLite:',
     username => undef,
     password => undef,
- );
+ });
 
  my $mapper = DBIx::ObjectMapper->new( engine => $engine );
 
@@ -142,7 +142,7 @@ Get/Define metadata of the table.
  my $user_meta = $mapper->metadata->table(
      'user' => [
          Col( id => Int(), PrimaryKey ),
-         Col( name => String(128) NotNull ),
+         Col( name => String(128), NotNull ),
      ]
  );
 
@@ -238,6 +238,10 @@ Returns the session_class.
 =head1 AUTHOR
 
 Eisuke Oishi
+
+=head1 CONTRIBUTORS
+
+nekokak: Atsushi Kobayashi
 
 =head1 COPYRIGHT
 

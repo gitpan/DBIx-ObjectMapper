@@ -25,6 +25,7 @@ recommends:
   Log::Any::Adapter::Dispatch: 0
   Mouse: 0.42
 requires:
+  Cache::LRU: 0
   Capture::Tiny: 0
   Carp::Clan: 0
   Class::Data::Inheritable: 0
@@ -41,7 +42,7 @@ requires:
   Hash::Merge: 0.12
   List::MoreUtils: 0
   Log::Any: 0
-  Module::Pluggable: 0
+  Module::Find: 0
   Params::Validate: 0
   Scalar::Util: 0
   Sub::Exporter: 0
@@ -53,4 +54,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/eisuke/dbix-objectmapper.git
-version: 0.3012
+version: 0.3013
